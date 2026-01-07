@@ -728,11 +728,10 @@ Before deploying to production:
 - `/examples/mdns_discovery`
 
 ### Community
-- GitHub Issues: [https://github.com/yourorg/rtnet-stack/issues](https://github.com/yourorg/rtnet-stack/issues)
-- Email Support: rtnet-support@yourorg.com
+- GitHub Issues: [https://github.com/seregonwar/rtnet-stack/issues](https://github.com/seregonwar/rtnet-stack/issues)
 
 ---
 
 **Document Version:** 1.0.0  
-**Last Updated:** 2025-01-07  
-**Maintainer:** RT Network Stack Team
+**Last Updated:** 2026-01-08  
+**Maintainer:** Seregonwar
