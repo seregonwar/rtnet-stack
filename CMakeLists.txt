@@ -29,6 +29,9 @@ endif()
 add_library(rtns STATIC ${RTNS_SOURCES})
 target_include_directories(rtns PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
+# Examples (desktop/host)
+option(RTNS_BUILD_EXAMPLES "Build desktop examples" ON)
+
 # Test executable (uses the library and optionally platform stubs)
 set(TEST_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/rtnet_test_suite.c
@@ -49,4 +52,18 @@ if(MSVC)
 else()
     target_compile_options(rtns PRIVATE -Wall -Wextra -Wpedantic)
     target_compile_options(rtns_tests PRIVATE -Wall -Wextra -Wpedantic)
+endif()
+
+if(RTNS_BUILD_EXAMPLES)
+    add_executable(rtns_desktop_demo
+        ${CMAKE_CURRENT_SOURCE_DIR}/examples/desktop_demo/main.c
+    )
+    target_link_libraries(rtns_desktop_demo PRIVATE rtns)
+    target_include_directories(rtns_desktop_demo PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+
+    if(MSVC)
+        target_compile_options(rtns_desktop_demo PRIVATE /W4)
+    else()
+        target_compile_options(rtns_desktop_demo PRIVATE -Wall -Wextra -Wpedantic)
+    endif()
 endif()
