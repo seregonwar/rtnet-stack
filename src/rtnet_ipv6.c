@@ -2,6 +2,8 @@
  * @file rtnet_ipv6.c
  * @brief IPv6 Layer Implementation (RFC 8200)
  * @version 1.0.0
+ * @date 2026-01-07
+ * @link https://github.com/seregonwar/rtnet-stack/blob/main/src/rtnet_ipv6.c
  * 
  * IMPLEMENTATION NOTES:
  * - All IPv6 addresses use network byte order (big-endian)
@@ -18,6 +20,28 @@
  * - All pointer parameters validated before use
  * - All array accesses bounds-checked
  * - No undefined behavior (verified via Clang static analyzer)
+ * 
+MIT License
+
+Copyright (c) 2026 Seregon
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
  */
 
 #include "rtnet_stack.h"
@@ -474,147 +498,7 @@ void RTNET_PeriodicTask(void)
     }
 }
 
-/* ==================== HOST-BUILD PUBLIC API STUBS ==================== */
-
-RTNET_Error_t RTNET_ProcessRxPacket(const uint8_t* data, uint16_t length)
-{
-    if ((data == NULL) || (length == 0U)) {
-        return RTNET_ERR_INVALID_PARAM;
-    }
-
-    /* Host stub: accept packet and mark stats; checksum may be missing */
-    g_RTNET_Ctx.stats.rx_packets++;
-
-    /* Simplified validation: ensure basic Ethernet + IPv6 header length */
-    if (length < (14U + 40U)) {
-        return RTNET_ERR_INVALID_PARAM;
-    }
-
-    return RTNET_ERR_CHECKSUM;
-}
-
-RTNET_Error_t RTNET_UDP_Send(const RTNET_IPv6Addr_t* dest_addr,
-                              uint16_t dest_port,
-                              uint16_t src_port,
-                              const uint8_t* payload,
-                              uint16_t payload_len,
-                              uint8_t qos_priority)
-{
-    (void)qos_priority;
-
-    if (!g_RTNET_Ctx.initialized) {
-        return RTNET_ERR_INVALID_PARAM;
-    }
-
-    if ((dest_addr == NULL) || (dest_port == 0U) || (payload == NULL) || (payload_len == 0U)) {
-        return RTNET_ERR_INVALID_PARAM;
-    }
-
-    if (payload_len > RTNET_MTU_SIZE) {
-        return RTNET_ERR_INVALID_PARAM;
-    }
-
-    /* Auto-assign ephemeral port if requested */
-    if (src_port == 0U) {
-        src_port = g_RTNET_Ctx.next_ephemeral_port++;
-        if (g_RTNET_Ctx.next_ephemeral_port == 0U) {
-            g_RTNET_Ctx.next_ephemeral_port = 49152U;
-        }
-    }
-
-    RTNET_RouteEntry_t* route = RTNET_FindRoute(dest_addr);
-    if (route == NULL) {
-        g_RTNET_Ctx.stats.routing_errors++;
-        return RTNET_ERR_NO_ROUTE;
-    }
-
-    /* Simulate TX buffer allocation */
-    RTNET_Buffer_t* buf = NULL;
-    for (uint8_t i = 0U; i < RTNET_MAX_TX_BUFFERS; i++) {
-        if (!g_RTNET_Ctx.tx_buffers[i].in_use) {
-            buf = &g_RTNET_Ctx.tx_buffers[i];
-            break;
-        }
-    }
-
-    if (buf == NULL) {
-        g_RTNET_Ctx.stats.tx_dropped++;
-        return RTNET_ERR_NO_BUFFER;
-    }
-
-    buf->in_use = true;
-    buf->length = payload_len;
-    buf->qos_priority = qos_priority;
-
-    (void)src_port;
-    (void)route;
-
-    g_RTNET_Ctx.stats.tx_packets++;
-    return RTNET_OK;
-}
-
-RTNET_Error_t RTNET_TCP_Connect(const RTNET_IPv6Addr_t* dest_addr,
-                                 uint16_t dest_port,
-                                 uint8_t* connection_id)
-{
-    if (!g_RTNET_Ctx.initialized) {
-        return RTNET_ERR_INVALID_PARAM;
-    }
-
-    if ((dest_addr == NULL) || (dest_port == 0U) || (connection_id == NULL)) {
-        return RTNET_ERR_INVALID_PARAM;
-    }
-
-    RTNET_RouteEntry_t* route = RTNET_FindRoute(dest_addr);
-    if (route == NULL) {
-        g_RTNET_Ctx.stats.routing_errors++;
-        return RTNET_ERR_NO_ROUTE;
-    }
-    (void)route;
-
-    for (uint8_t i = 0U; i < RTNET_MAX_TCP_CONNECTIONS; i++) {
-        RTNET_TCPConnection_t* conn = &g_RTNET_Ctx.tcp_connections[i];
-        if (!conn->in_use) {
-            memset(conn, 0, sizeof(RTNET_TCPConnection_t));
-            memcpy(&conn->local_addr, &g_RTNET_Ctx.local_ipv6, sizeof(RTNET_IPv6Addr_t));
-            memcpy(&conn->remote_addr, dest_addr, sizeof(RTNET_IPv6Addr_t));
-            conn->local_port = g_RTNET_Ctx.next_ephemeral_port++;
-            conn->remote_port = dest_port;
-            conn->state = RTNET_TCP_ESTABLISHED;
-            conn->last_activity_ms = RTNET_GetTimeMs();
-            conn->in_use = true;
-            *connection_id = i;
-            return RTNET_OK;
-        }
-    }
-
-    return RTNET_ERR_NO_BUFFER;
-}
-
-RTNET_Error_t RTNET_TCP_Send(uint8_t connection_id,
-                              const uint8_t* data,
-                              uint16_t length)
-{
-    if ((data == NULL) || (length == 0U)) {
-        return RTNET_ERR_INVALID_PARAM;
-    }
-
-    if (connection_id >= RTNET_MAX_TCP_CONNECTIONS) {
-        return RTNET_ERR_INVALID_PARAM;
-    }
-
-    RTNET_TCPConnection_t* conn = &g_RTNET_Ctx.tcp_connections[connection_id];
-    if (!conn->in_use) {
-        return RTNET_ERR_CONNECTION;
-    }
-
-    conn->last_activity_ms = RTNET_GetTimeMs();
-    g_RTNET_Ctx.stats.tx_packets++;
-
-    return RTNET_OK;
-}
-
-RTNET_Error_t RTNET_TCP_Close(uint8_t connection_id)
+RTNET_Error_t RTNET_CloseConnection(uint8_t connection_id)
 {
     if (connection_id >= RTNET_MAX_TCP_CONNECTIONS) {
         return RTNET_ERR_INVALID_PARAM;
@@ -627,32 +511,5 @@ RTNET_Error_t RTNET_TCP_Close(uint8_t connection_id)
 
     conn->in_use = false;
     conn->state = RTNET_TCP_CLOSED;
-    return RTNET_OK;
-}
-
-RTNET_Error_t RTNET_mDNS_Query(const char* service_name,
-                                RTNET_mDNSRecord_t* result)
-{
-    if ((service_name == NULL) || (result == NULL)) {
-        return RTNET_ERR_INVALID_PARAM;
-    }
-
-    (void)service_name;
-    memset(result, 0, sizeof(RTNET_mDNSRecord_t));
-
-    /* Host stub: no responder available, simulate timeout */
-    return RTNET_ERR_TIMEOUT;
-}
-
-RTNET_Error_t RTNET_mDNS_Announce(const char* service_name,
-                                   uint16_t port,
-                                   uint32_t ttl_sec)
-{
-    if ((service_name == NULL) || (port == 0U) || (ttl_sec == 0U)) {
-        return RTNET_ERR_INVALID_PARAM;
-    }
-
-    /* Host stub: pretend announce succeeded */
-    g_RTNET_Ctx.stats.tx_packets++;
     return RTNET_OK;
 }
