@@ -22,7 +22,7 @@ cmake --build build --config Debug
 - `examples/mdns_discovery` – service query demo
 
 ## Documentation
-- Integration guide: `docs/README_integration.md` (dettagli tecnico/embedded)
+- Integration guide: `docs/integration.md` 
 - API: `docs/api_reference.md`
 - Architettura: `docs/architecture.md`
 - Verifica: `docs/VERIFICATION_REPORT.md`
